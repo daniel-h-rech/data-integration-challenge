@@ -19,10 +19,19 @@ func Start(apiAddress string, mongoDBAddress string) error {
 		switch r.Method {
 
 		case http.MethodGet:
-			company, err := data.FindCompany(data.Company{
+
+			companyKey := data.Company{
 				Name: r.URL.Query().Get("name"),
 				Zip:  r.URL.Query().Get("zip"),
-			})
+			}
+
+			if companyKey.Name == "" || companyKey.Zip == "" {
+				w.WriteHeader(http.StatusBadRequest)
+				// TODO write StatusBadRequest message
+				return
+			}
+
+			company, err := data.FindCompany(companyKey)
 
 			if err == nil {
 				// TODO
@@ -30,7 +39,7 @@ func Start(apiAddress string, mongoDBAddress string) error {
 
 			if company == nil {
 				w.WriteHeader(http.StatusNotFound)
-				// TODO write not found message
+				// TODO write StatusNotFound message
 			} else {
 				w.Header().Set("Content-Type", "application/json")
 				json.NewEncoder(w).Encode(company)
@@ -40,7 +49,7 @@ func Start(apiAddress string, mongoDBAddress string) error {
 			err := data.MergeCompanies(r.Body)
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
-				// TODO write bad request message
+				// TODO write StatusBadRequest message
 			}
 
 		default:
