@@ -27,7 +27,7 @@ type index struct {
 	Name string
 }
 
-var companies *mongo.Collection
+var companies *mongo.Collection // TODO nil checks
 
 func ensureIndex(context context.Context) {
 
@@ -172,6 +172,10 @@ func FindCompany(companyKey Company) (*Company, error) {
 			"zip":   companyKey.Zip,
 		},
 	).Decode(&company)
+
+	if err == mongo.ErrNoDocuments {
+		return nil, nil
+	}
 
 	if err != nil {
 		return nil, err
