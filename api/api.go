@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	. "strings"
 	"time"
 )
 
@@ -32,8 +33,8 @@ func Start(apiAddress string, mongoDBAddress string) {
 		case http.MethodGet:
 
 			companyKey := data.Company{
-				Name: r.URL.Query().Get("name"),
-				Zip:  r.URL.Query().Get("zip"),
+				Name: TrimSpace(r.URL.Query().Get("name")),
+				Zip:  TrimSpace(r.URL.Query().Get("zip")),
 			}
 
 			if companyKey.Name == "" || companyKey.Zip == "" {
@@ -45,8 +46,8 @@ func Start(apiAddress string, mongoDBAddress string) {
 			company, err := data.FindCompany(companyKey)
 
 			if err != nil {
-				// TODO
-				println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				Println(err)
 			}
 
 			if company == nil {
@@ -54,7 +55,11 @@ func Start(apiAddress string, mongoDBAddress string) {
 				// TODO write StatusNotFound message
 			} else {
 				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(company)
+				err := json.NewEncoder(w).Encode(company)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					Println(err)
+				}
 			}
 
 		case http.MethodPost:
