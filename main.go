@@ -1,4 +1,4 @@
-package data_integration_challenge
+package main
 
 import (
 	"github.com/daniel-h-rech/data-integration-challenge/api"
