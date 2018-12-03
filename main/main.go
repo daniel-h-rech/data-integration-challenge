@@ -23,8 +23,6 @@ func main() {
 
 	data.LoadCompanyData(csvFilepath, mongoDBAddress)
 
-	err := api.Start(":8080", mongoDBAddress)
-	if err != nil {
-		Fatal(err)
-	}
+	api.Start(":8080", mongoDBAddress)
+	Println("exit")
 }
