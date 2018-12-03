@@ -222,7 +222,7 @@ func MergeCompanies(reader io.ReadCloser) error {
 	})
 }
 
-func readCSVStream(reader io.ReadCloser, processCSVRecord func(record []string) error) error {
+func readCSVStream(reader io.Reader, processCSVRecord func(record []string) error) error {
 
 	csvReader := csv.NewReader(reader)
 	csvReader.Comma = ';'
