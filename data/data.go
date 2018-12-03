@@ -6,6 +6,7 @@ import (
 	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/mongodb/mongo-go-driver/bson/primitive"
 	"github.com/mongodb/mongo-go-driver/mongo"
+	"github.com/mongodb/mongo-go-driver/x/bsonx"
 	"io"
 	. "log"
 	"os"
@@ -20,25 +21,90 @@ type Company struct {
 	Website string             `json:"website"`
 }
 
+type Close func()
+
+type index struct {
+	Name string
+}
+
 var companies *mongo.Collection
 
-func Connect(mongoDBAddress string) {
+func ensureIndex(context context.Context) {
+
+	cursor, err := companies.Indexes().List(context)
+	if err != nil {
+		Fatal("error listing indexes")
+	}
+
+	const indexName = "nameTextIndex"
+
+	exists := false
+	for cursor.Next(context) {
+
+		i := index{}
+		err := cursor.Decode(&i)
+		if err != nil {
+			Fatal("error listing indexes")
+		}
+
+		if i.Name == indexName {
+			exists = true
+			break
+		}
+	}
+
+	if !exists {
+		Printf("index %s does not exist, will create", indexName)
+
+		_, err = companies.Indexes().CreateOne(context, mongo.IndexModel{
+			Keys:    bsonx.Doc{{"name", bsonx.String("text")}},
+			Options: mongo.NewIndexOptionsBuilder().Name(indexName).Build(),
+		})
+
+		if err != nil {
+			Fatalf("Could not create index %s", indexName)
+		}
+
+		Printf("created index %s", indexName)
+	}
+}
+
+func Connect(mongoDBAddress string) Close {
 
 	client, err := mongo.NewClient("mongodb://" + mongoDBAddress)
 	if err != nil {
-		Fatalf("Invalid address %s", mongoDBAddress)
+		Fatalf("invalid address %s", mongoDBAddress)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	Printf("connecting to %s", client.ConnectionString())
+
+	connectTimeout, cancel := context.WithTimeout(context.Background(), time.Minute) // TODO configurable timeout
 	defer cancel()
 
-	err = client.Connect(ctx)
+	err = client.Connect(connectTimeout)
 	if err != nil {
-		Fatalf("Could not connect to mongodb at %s ", mongoDBAddress)
+		Fatalf("could not connect to mongodb at %s ", mongoDBAddress)
 	}
 
-	// TODO add ensure indexes
 	companies = client.Database("rechHaeserDaniel").Collection("companies")
+
+	ensureIndex(connectTimeout)
+
+	Println("connected")
+
+	return func() {
+		Println("closing mongodb connection...")
+
+		disconnectTimeout, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second) // TODO configurable timeout
+		defer cancelFunc()
+
+		err := client.Disconnect(disconnectTimeout)
+		if err != nil {
+			Println(err)
+		}
+
+		Println("mongodb connection closed")
+	}
 }
 
 func LoadCompanyData(filepath string, mongoDBAddress string) {
@@ -47,7 +113,8 @@ func LoadCompanyData(filepath string, mongoDBAddress string) {
 		Fatalf("file %s does not exist", filepath)
 	}
 
-	Connect(mongoDBAddress)
+	close := Connect(mongoDBAddress)
+	defer close()
 
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -55,11 +122,16 @@ func LoadCompanyData(filepath string, mongoDBAddress string) {
 	}
 	defer file.Close()
 
+	Printf("Loading file %s...", filepath)
+
 	err = readCSVStream(file, func(record []string) error {
 
 		record[0] = ToUpper(record[0])
 
-		count, err := companies.Count(context.Background(), bson.D{
+		recordTimeout, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second) // TODO configurable timeout
+		defer cancelFunc()
+
+		count, err := companies.Count(recordTimeout, bson.D{
 			{"name", record[0]},
 			{"zip", record[1]},
 		})
@@ -68,7 +140,7 @@ func LoadCompanyData(filepath string, mongoDBAddress string) {
 		}
 
 		if count == 0 {
-			_, err = companies.InsertOne(context.Background(), bson.M{
+			_, err = companies.InsertOne(recordTimeout, bson.M{
 				"name": record[0],
 				"zip":  record[1],
 			})
@@ -83,13 +155,18 @@ func LoadCompanyData(filepath string, mongoDBAddress string) {
 	if err != nil {
 		Fatal(err)
 	}
+
+	Println("Done loading")
 }
 
 func FindCompany(companyKey Company) (*Company, error) {
 
+	timeout, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelFunc()
+
 	company := Company{}
 
-	err := companies.FindOne(context.Background(),
+	err := companies.FindOne(timeout,
 		bson.M{
 			"$text": bson.M{"$search": ToUpper(companyKey.Name)},
 			"zip":   companyKey.Zip,
@@ -107,9 +184,12 @@ func MergeCompanies(reader io.ReadCloser) error {
 
 	return readCSVStream(reader, func(record []string) error {
 
+		timeout, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancelFunc()
+
 		company := Company{}
 
-		err := companies.FindOneAndUpdate(context.Background(),
+		err := companies.FindOneAndUpdate(timeout,
 			bson.D{
 				{
 					"name", ToUpper(record[0]),
