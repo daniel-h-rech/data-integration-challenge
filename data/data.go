@@ -187,9 +187,7 @@ func MergeCompanies(reader io.ReadCloser) error {
 		timeout, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancelFunc()
 
-		company := Company{}
-
-		err := companies.FindOneAndUpdate(timeout,
+		result := companies.FindOneAndUpdate(timeout,
 			bson.D{
 				{
 					"name", ToUpper(record[0]),
@@ -202,13 +200,21 @@ func MergeCompanies(reader io.ReadCloser) error {
 				{
 					"$set", bson.M{"website": ToLower(record[2])},
 				},
-			}).Decode(&company)
+			},
+		)
 
-		if err != nil {
-			return err
+		if result.Err() != nil {
+			return result.Err()
 		}
 
-		return nil
+		company := Company{}
+
+		err := result.Decode(&company)
+		if err == nil || err == mongo.ErrNoDocuments {
+			return nil
+		}
+
+		return err
 	})
 }
 
