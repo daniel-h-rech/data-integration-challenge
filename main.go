@@ -14,7 +14,7 @@ func main() {
 		Println("\t" + "integration <CSV file path> <MongoDB network address>")
 		Println()
 		Println("Example:")
-		Println("\t" + "integration q1_catalog.csv 172.17.0.2:27017")
+		Println("\t" + "integration q1_catalog.csv localhost:27017")
 		return
 	}
 
