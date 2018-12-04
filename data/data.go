@@ -124,9 +124,11 @@ func LoadCompanyData(filepath string, mongoDBAddress string) {
 
 	Printf("Loading file %s...", filepath)
 
-	err = readCSVStream(file, func(record []string) error {
+	err = ReadCSVStream(file, func(record []string) error {
 
 		record[0] = ToUpper(record[0])
+
+		// TODO check if zip code is a 5 digit string
 
 		recordTimeout, cancelFunc := context.WithTimeout(context.Background(), 10*time.Second) // TODO configurable timeout
 		defer cancelFunc()
@@ -186,7 +188,7 @@ func FindCompany(companyKey Company) (*Company, error) {
 
 func MergeCompanies(reader io.ReadCloser) error {
 
-	return readCSVStream(reader, func(record []string) error {
+	return ReadCSVStream(reader, func(record []string) error {
 
 		timeout, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancelFunc()
@@ -222,7 +224,7 @@ func MergeCompanies(reader io.ReadCloser) error {
 	})
 }
 
-func readCSVStream(reader io.Reader, processCSVRecord func(record []string) error) error {
+func ReadCSVStream(reader io.Reader, processCSVRecord func(record []string) error) error {
 
 	csvReader := csv.NewReader(reader)
 	csvReader.Comma = ';'

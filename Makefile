@@ -11,7 +11,9 @@ stop:
 	- docker network rm rech.haeser.daniel-network
 
 check:
-	go test -v -cover ./...
+	docker run -d -p 27018:27017 --rm --name rech.haeser.daniel-mongo_test mongo:4.0.4
+	- go test -v -cover ./...
+	docker stop rech.haeser.daniel-mongo_test
 
 setup:
 	go get github.com/mongodb/mongo-go-driver/mongo

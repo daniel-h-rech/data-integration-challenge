@@ -28,7 +28,7 @@ func TestReadCSVStream(t *testing.T) {
 
 		j := 0
 
-		err := readCSVStream(strings.NewReader(test.input), func(record []string) error {
+		err := ReadCSVStream(strings.NewReader(test.input), func(record []string) error {
 
 			if !reflect.DeepEqual(test.expectedOutput[j], record) {
 				t.Error()
