@@ -68,6 +68,7 @@ func Start(apiAddress string, mongoDBAddress string) {
 				w.WriteHeader(http.StatusBadRequest)
 				// TODO write StatusBadRequest message
 			}
+			w.WriteHeader(http.StatusNoContent)
 
 		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
