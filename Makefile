@@ -17,5 +17,12 @@ check:
 
 setup:
 	go get github.com/mongodb/mongo-go-driver/mongo
+	go get github.com/go-chi/chi
+	go get -u github.com/go-swagger/go-swagger/cmd/swagger
 	docker pull mongo:4.0.4
 	docker build -t rech.haeser.daniel-data-integration-challenge .
+
+spec:
+	go get -u github.com/go-swagger/go-swagger/cmd/swagger
+	${GOPATH}/bin/swagger generate spec -o swagger.json
+	${GOPATH}/bin/swagger serve -F swagger swagger.json

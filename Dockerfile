@@ -1,6 +1,7 @@
 FROM golang:1.11.2
 
 RUN go get github.com/mongodb/mongo-go-driver/mongo
+RUN go get github.com/go-chi/chi
 
 ENV PROJECT_NAME data-integration-challenge
 ENV PROJECT_ROOT ${GOPATH}/src/github.com/daniel-h-rech/${PROJECT_NAME}
