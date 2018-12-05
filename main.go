@@ -7,6 +7,7 @@ import (
 	. "os"
 )
 
+//go:generate swagger generate spec
 func main() {
 
 	if len(Args) < 3 {
