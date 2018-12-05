@@ -14,6 +14,7 @@ import (
 	"time"
 )
 
+// swagger:response Company
 type Company struct {
 	Id      primitive.ObjectID `json:"id" bson:"_id"`
 	Name    string             `json:"name"`
